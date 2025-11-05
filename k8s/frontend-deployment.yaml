@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-frontend
+  namespace: llm-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-frontend
+  template:
+    metadata:
+      labels:
+        app: llm-frontend
+    spec:
+      containers:
+      - name: llm-frontend
+        image: asia-southeast1-docker.pkg.dev/mlops-476305/my-mlops/llm-frontend:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: BACKEND_URL
+          value: "http://llm-backend-service.llm-app.svc.cluster.local/inference"
+        - name: OAUTH_REDIRECT_URL
+          value: "https://mlops-ai.duckdns.org/oauth2/callback"

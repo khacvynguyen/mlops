@@ -1,0 +1,97 @@
+# ===================== ⚙️ CONFIGMAP - danh sách email được phép truy cập =====================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oauth2-proxy-config
+  namespace: llm-app
+data:
+  email_whitelist.txt: |
+    khacvy17072001@gmail.com
+    khacvygaming@gmail.com
+    hoan.nc0506@gmail.com
+
+---
+
+# ===================== 🚀 DEPLOYMENT =====================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy
+  namespace: llm-app
+  labels:
+    app: oauth2-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy
+    spec:
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4180
+          args:
+            - --provider=google
+            - --http-address=0.0.0.0:4180
+            - --upstream=http://llm-frontend-service.llm-app.svc.cluster.local:80
+            - --authenticated-emails-file=/config/email_whitelist.txt
+            - --email-domain=*
+            - --redirect-url=https://mlops-ai.duckdns.org/oauth2/callback   # ✅ sử dụng .nip.io domain (dot notation)
+            - --cookie-domain=mlops-ai.duckdns.org
+            - --whitelist-domain=.mlops-ai.duckdns.org
+            - --cookie-secure=true
+            - --cookie-refresh=1h
+            - --cookie-expire=8h
+            - --set-authorization-header=true
+            - --skip-provider-button=true
+            - --skip-auth-strip-headers=true        # ✅ đảm bảo header sạch khi proxy
+            - --proxy-prefix=/oauth2               # ✅ bắt buộc để mapping route /oauth2/callback
+            - --skip-auth-regex=^/_stcore/.*        # ✅ bỏ qua auth cho Streamlit WebSocket
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-secret
+                  key: OAUTH2_PROXY_CLIENT_ID
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-secret
+                  key: OAUTH2_PROXY_CLIENT_SECRET
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-secret
+                  key: OAUTH2_PROXY_COOKIE_SECRET
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: oauth2-proxy-config
+
+---
+
+# ===================== 🌐 SERVICE - expose qua LoadBalancer =====================
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy-service
+  namespace: llm-app
+  labels:
+    app: oauth2-proxy
+spec:
+  type: ClusterIP
+  selector:
+    app: oauth2-proxy
+  ports:
+    - name: http
+      port: 80
+      targetPort: 4180

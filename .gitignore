@@ -1,0 +1,17 @@
+__pycache__/
+*/__pycache__
+*.sh
+test_requirements.txt
+langfuse/
+.env*
+explore/
+jenkins/jenkins-ci-key.json
+infra/terraform/.terraform/
+notebooks/
+prompts/
+llm_inference/
+rag/
+chat_ui.py
+data_pipeline/
+assets/
+configs/

@@ -1,0 +1,14 @@
+   apiVersion: cert-manager.io/v1
+   kind: ClusterIssuer
+   metadata:
+     name: letsencrypt-staging
+   spec:
+     acme:
+       email: khacvy17072001l@gmail.com        # đổi thành email của bạn
+       server: https://acme-staging-v02.api.letsencrypt.org/directory
+       privateKeySecretRef:
+         name: letsencrypt-staging-key
+       solvers:
+         - http01:
+             ingress:
+               class: nginx

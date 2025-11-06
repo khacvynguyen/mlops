@@ -2,7 +2,6 @@ __pycache__/
 */__pycache__
 *.sh
 test_requirements.txt
-langfuse/
 .env*
 explore/
 jenkins/jenkins-ci-key.json

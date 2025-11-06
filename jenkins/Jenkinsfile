@@ -106,7 +106,7 @@ pipeline {
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
               BUILD_NAME=$(gcloud builds submit --async --format='value(name)' backend --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID})
-              BUILD_ID=${BUILD_NAME##*/}
+              BUILD_ID=$(echo \"${BUILD_NAME}\" | awk -F/ '{print $NF}')
 
               while true; do
                 STATUS=$(gcloud builds describe \"${BUILD_ID}\" --project ${PROJECT_ID} --format='value(status)')
@@ -143,7 +143,7 @@ pipeline {
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
               BUILD_NAME=$(gcloud builds submit --async --format='value(name)' frontend --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID})
-              BUILD_ID=${BUILD_NAME##*/}
+              BUILD_ID=$(echo \"${BUILD_NAME}\" | awk -F/ '{print $NF}')
 
               while true; do
                 STATUS=$(gcloud builds describe \"${BUILD_ID}\" --project ${PROJECT_ID} --format='value(status)')

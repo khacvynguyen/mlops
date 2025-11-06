@@ -86,7 +86,7 @@ pipeline {
               . venv/bin/activate
               pip install --upgrade pip
               if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
-              if [ -d backend/tests ]; then pytest backend/tests; else echo "No backend tests directory"; fi
+              if [ -d backend/tests ]; then pytest backend/tests; else echo 'No backend tests directory'; fi
             "
           '''
         }

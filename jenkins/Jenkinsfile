@@ -104,7 +104,7 @@ pipeline {
             /bin/bash -c "
               set -euxo pipefail
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
-              gcloud builds submit backend --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID}
+              gcloud builds submit --suppress-logs backend --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID}
               gcloud artifacts docker tags add ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} ${BACKEND_IMAGE_REPO}:latest --quiet
             "
           '''
@@ -122,7 +122,7 @@ pipeline {
             /bin/bash -c "
               set -euxo pipefail
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
-              gcloud builds submit frontend --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID}
+              gcloud builds submit --suppress-logs frontend --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID}
               gcloud artifacts docker tags add ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} ${FRONTEND_IMAGE_REPO}:latest --quiet
             "
           '''

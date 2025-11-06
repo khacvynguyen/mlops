@@ -104,8 +104,9 @@ pipeline {
             /bin/bash -c "
               set -euxo pipefail
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
-              BUILD_ID=$(gcloud builds submit --async --format='value(metadata.build.id)' backend --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID})
-              gcloud builds wait \"${BUILD_ID}\" --project ${PROJECT_ID}
+              BUILD_OP=$(gcloud builds submit --async --format='value(name)' backend --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID})
+              gcloud builds operations wait \"${BUILD_OP}\" --project ${PROJECT_ID}
+              BUILD_ID=$(gcloud builds operations describe \"${BUILD_OP}\" --project ${PROJECT_ID} --format='value(metadata.build.id)')
               gcloud artifacts docker tags add ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} ${BACKEND_IMAGE_REPO}:latest --quiet
             "
           '''
@@ -123,8 +124,9 @@ pipeline {
             /bin/bash -c "
               set -euxo pipefail
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
-              BUILD_ID=$(gcloud builds submit --async --format='value(metadata.build.id)' frontend --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID})
-              gcloud builds wait \"${BUILD_ID}\" --project ${PROJECT_ID}
+              BUILD_OP=$(gcloud builds submit --async --format='value(name)' frontend --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID})
+              gcloud builds operations wait \"${BUILD_OP}\" --project ${PROJECT_ID}
+              BUILD_ID=$(gcloud builds operations describe \"${BUILD_OP}\" --project ${PROJECT_ID} --format='value(metadata.build.id)')
               gcloud artifacts docker tags add ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} ${FRONTEND_IMAGE_REPO}:latest --quiet
             "
           '''

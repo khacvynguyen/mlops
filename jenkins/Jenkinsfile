@@ -56,14 +56,16 @@ pipeline {
           script {
             withCredentials([file(credentialsId: 'gcp-sa', variable: 'GCP_SA_JSON')]) {
               sh '''
-                set -euxo pipefail
-                cp "$GCP_SA_JSON" ${WORKSPACE}/sa.json
-                export GOOGLE_APPLICATION_CREDENTIALS=${WORKSPACE}/sa.json
-                gcloud auth activate-service-account --key-file=${WORKSPACE}/sa.json
-                gcloud config set project $PROJECT_ID
-                gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
-                gcloud components install kubectl --quiet || true
-                gcloud container clusters get-credentials $CLUSTER_NAME --region $CLUSTER_LOCATION --project $PROJECT_ID
+                /bin/bash -c "
+                  set -euxo pipefail
+                  cp "$GCP_SA_JSON" ${WORKSPACE}/sa.json
+                  export GOOGLE_APPLICATION_CREDENTIALS=${WORKSPACE}/sa.json
+                  gcloud auth activate-service-account --key-file=${WORKSPACE}/sa.json
+                  gcloud config set project $PROJECT_ID
+                  gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+                  gcloud components install kubectl --quiet || true
+                  gcloud container clusters get-credentials $CLUSTER_NAME --region $CLUSTER_LOCATION --project $PROJECT_ID
+                "
               '''
               env.GOOGLE_APPLICATION_CREDENTIALS = "${env.WORKSPACE}/sa.json"
               env.TF_VAR_google_credentials_path = env.GOOGLE_APPLICATION_CREDENTIALS
@@ -78,12 +80,14 @@ pipeline {
       steps {
         container('ci') {
           sh '''
-            set -euxo pipefail
-            python3 -m venv venv
-            . venv/bin/activate
-            pip install --upgrade pip
-            if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
-            if [ -d backend/tests ]; then pytest backend/tests; else echo "No backend tests directory"; fi
+            /bin/bash -c "  
+              set -euxo pipefail
+              python3 -m venv venv
+              . venv/bin/activate
+              pip install --upgrade pip
+              if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
+              if [ -d backend/tests ]; then pytest backend/tests; else echo "No backend tests directory"; fi
+            "
           '''
         }
       }
@@ -93,10 +97,12 @@ pipeline {
       steps {
         container('ci') {
           sh '''
-            set -euxo pipefail
-            export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
-            gcloud builds submit backend --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID}
-            gcloud artifacts docker tags add ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} ${BACKEND_IMAGE_REPO}:latest --quiet
+            /bin/bash -c "
+              set -euxo pipefail
+              export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+              gcloud builds submit backend --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID}
+              gcloud artifacts docker tags add ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} ${BACKEND_IMAGE_REPO}:latest --quiet
+            "
           '''
         }
       }
@@ -109,10 +115,12 @@ pipeline {
       steps {
         container('ci') {
           sh '''
-            set -euxo pipefail
-            export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
-            gcloud builds submit frontend --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID}
-            gcloud artifacts docker tags add ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} ${FRONTEND_IMAGE_REPO}:latest --quiet
+            /bin/bash -c "
+              set -euxo pipefail
+              export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+              gcloud builds submit frontend --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID}
+              gcloud artifacts docker tags add ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} ${FRONTEND_IMAGE_REPO}:latest --quiet
+            "
           '''
         }
       }
@@ -123,15 +131,17 @@ pipeline {
         container('ci') {
           dir('infra/terraform') {
             sh '''
-              set -euxo pipefail
-              terraform init -input=false
-              terraform plan -input=false \
-                -var="backend_image=${BACKEND_IMAGE_REPO}:${IMAGE_TAG}" \
-                -var="frontend_image=${FRONTEND_IMAGE_REPO}:${IMAGE_TAG}" \
-                -var="backend_replicas=${BACKEND_REPLICAS}" \
-                -var="frontend_replicas=${FRONTEND_REPLICAS}" \
-                -var="oauth2_replicas=${OAUTH2_REPLICAS}" \
-                -out=tfplan
+              /bin/bash -c "
+                set -euxo pipefail
+                terraform init -input=false
+                terraform plan -input=false \
+                  -var="backend_image=${BACKEND_IMAGE_REPO}:${IMAGE_TAG}" \
+                  -var="frontend_image=${FRONTEND_IMAGE_REPO}:${IMAGE_TAG}" \
+                  -var="backend_replicas=${BACKEND_REPLICAS}" \
+                  -var="frontend_replicas=${FRONTEND_REPLICAS}" \
+                  -var="oauth2_replicas=${OAUTH2_REPLICAS}" \
+                  -out=tfplan
+                "
             '''
           }
         }
@@ -154,8 +164,10 @@ pipeline {
         container('ci') {
           dir('infra/terraform') {
             sh '''
-              set -euxo pipefail
-              terraform apply -input=false -auto-approve tfplan
+              /bin/bash -c "
+                set -euxo pipefail
+                terraform apply -input=false -auto-approve tfplan
+              "
             '''
           }
         }
@@ -166,9 +178,11 @@ pipeline {
       steps {
         container('ci') {
           sh '''
-            set -euxo pipefail
-            kubectl rollout status deployment/llm-backend -n llm-app --timeout=120s || true
-            kubectl rollout status deployment/llm-frontend -n llm-app --timeout=120s || true
+            /bin/bash -c "
+              set -euxo pipefail
+              kubectl rollout status deployment/llm-backend -n llm-app --timeout=120s || true
+              kubectl rollout status deployment/llm-frontend -n llm-app --timeout=120s || true
+            "
           '''
         }
       }

@@ -4,17 +4,32 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def noop_langfuse_observe(monkeypatch):
-    """Provide a no-op replacement for `langfuse.observe` decorator."""
+    """Provide a no-op replacement for langfuse decorator/context."""
+
     def _identity_decorator(*_args, **_kwargs):
         def _wrap(func):
             return func
         return _wrap
 
-    fake_module = types.ModuleType("langfuse")
-    setattr(fake_module, "observe", _identity_decorator)
-    monkeypatch.setitem(sys.modules, "langfuse", fake_module)
-    yield
+    def _noop(*_args, **_kwargs):
+        return None
 
+    fake_package = types.ModuleType("langfuse")
+    decorators_mod = types.ModuleType("langfuse.decorators")
+
+    setattr(decorators_mod, "observe", _identity_decorator)
+    setattr(decorators_mod, "langfuse_context", types.SimpleNamespace(
+        update_current_trace=_noop,
+        update_current_observation=_noop,
+    ))
+
+    setattr(fake_package, "decorators", decorators_mod)
+
+    monkeypatch.setitem(sys.modules, "langfuse", fake_package)
+    monkeypatch.setitem(sys.modules, "langfuse.decorators", decorators_mod)
+    yield
+    for mod in ["langfuse", "langfuse.decorators"]:
+        sys.modules.pop(mod, None)
 
 @pytest.fixture()
 def fake_litellm(monkeypatch):

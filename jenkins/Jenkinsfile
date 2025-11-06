@@ -104,7 +104,7 @@ pipeline {
             /bin/bash -c "
               set -euxo pipefail
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
-              gcloud builds submit --async backend --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID}
+              gcloud builds submit backend --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID}
               gcloud artifacts docker tags add ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} ${BACKEND_IMAGE_REPO}:latest --quiet
             "
           '''

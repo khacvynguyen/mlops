@@ -3,6 +3,11 @@ import types
 import pytest
 
 @pytest.fixture(autouse=True)
+def fake_env(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy-key")
+    yield
+
+@pytest.fixture(autouse=True)
 def noop_langfuse_observe(monkeypatch):
     """Provide a no-op replacement for langfuse decorator/context."""
 

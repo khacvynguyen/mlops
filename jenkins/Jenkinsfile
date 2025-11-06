@@ -106,15 +106,16 @@ pipeline {
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
               BUILD_NAME=$(gcloud builds submit --async --format='value(name)' backend --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID})
+              BUILD_ID=${BUILD_NAME##*/}
 
               while true; do
-                STATUS=$(gcloud builds describe \"${BUILD_NAME}\" --project ${PROJECT_ID} --format='value(status)')
+                STATUS=$(gcloud builds describe \"${BUILD_ID}\" --project ${PROJECT_ID} --format='value(status)')
                 case \"${STATUS}\" in
                   SUCCESS)
                     break
                     ;;
                   FAILURE|CANCELLED|TIMEOUT|EXPIRED)
-                    gcloud builds describe \"${BUILD_NAME}\" --project ${PROJECT_ID}
+                    gcloud builds describe \"${BUILD_ID}\" --project ${PROJECT_ID}
                     exit 1
                     ;;
                   *)
@@ -123,7 +124,6 @@ pipeline {
                 esac
               done
 
-              BUILD_ID=${BUILD_NAME##*/}
               gcloud artifacts docker tags add ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} ${BACKEND_IMAGE_REPO}:latest --quiet
             "
           '''
@@ -143,15 +143,16 @@ pipeline {
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
               BUILD_NAME=$(gcloud builds submit --async --format='value(name)' frontend --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID})
+              BUILD_ID=${BUILD_NAME##*/}
 
               while true; do
-                STATUS=$(gcloud builds describe \"${BUILD_NAME}\" --project ${PROJECT_ID} --format='value(status)')
+                STATUS=$(gcloud builds describe \"${BUILD_ID}\" --project ${PROJECT_ID} --format='value(status)')
                 case \"${STATUS}\" in
                   SUCCESS)
                     break
                     ;;
                   FAILURE|CANCELLED|TIMEOUT|EXPIRED)
-                    gcloud builds describe \"${BUILD_NAME}\" --project ${PROJECT_ID}
+                    gcloud builds describe \"${BUILD_ID}\" --project ${PROJECT_ID}
                     exit 1
                     ;;
                   *)
@@ -160,13 +161,13 @@ pipeline {
                 esac
               done
 
-              BUILD_ID=${BUILD_NAME##*/}
               gcloud artifacts docker tags add ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} ${FRONTEND_IMAGE_REPO}:latest --quiet
             "
           '''
         }
       }
     }
+    
 
     stage('Terraform Init & Plan') {
       steps {

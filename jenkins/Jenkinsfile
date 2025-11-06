@@ -16,9 +16,9 @@ pipeline {
     CLUSTER_NAME              = 'mlops-cluster'
     CLUSTER_LOCATION          = 'asia-southeast1'
     TERRAFORM_VERSION         = '1.13.4'
-    BACKEND_REPLICAS          = '0'
-    FRONTEND_REPLICAS         = '0'
-    OAUTH2_REPLICAS           = '0'
+    BACKEND_REPLICAS          = '1'
+    FRONTEND_REPLICAS         = '1'
+    OAUTH2_REPLICAS           = '1'
     CLOUDSDK_CORE_DISABLE_PROMPTS = '1'
   }
 
@@ -36,13 +36,15 @@ pipeline {
       steps {
         container('ci') {
           sh '''
-            set -euxo pipefail
-            apt-get update
-            apt-get install -y --no-install-recommends \
-              python3 python3-venv python3-pip unzip curl gnupg lsb-release
-            curl -fsSLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-            unzip -o terraform.zip -d /usr/local/bin
-            rm terraform.zip
+            /bin/bash -c "
+              set -euxo pipefail
+              apt-get update
+              apt-get install -y --no-install-recommends \\
+                python3 python3-venv python3-pip unzip curl gnupg lsb-release
+              curl -fsSLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+              unzip -o terraform.zip -d /usr/local/bin
+              rm terraform.zip
+            "
           '''
         }
       }

@@ -105,12 +105,12 @@ pipeline {
               set -euxo pipefail
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
-              BUILD_NAME=$(gcloud builds submit --async --format='value(name)' backend --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID})
-              if [ -z \"${BUILD_NAME}\" ]; then
+              BUILD_NAME=\\$(gcloud builds submit --async --format='value(name)' backend --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID})
+              if [ -z \\"\\${BUILD_NAME}\\" ]; then
                 echo 'Khong lay duoc Cloud Build name'
                 exit 1
               fi
-              echo \"Triggered Cloud Build: ${BUILD_NAME}\"
+              echo \\"Triggered Cloud Build: \\${BUILD_NAME}\\"
 
               STATUS=''
               ATTEMPTS=0
@@ -118,27 +118,27 @@ pipeline {
               SLEEP_SECONDS=10
 
               while true; do
-                STATUS=$(gcloud builds describe \"${BUILD_NAME}\" --project ${PROJECT_ID} --format='value(status)' 2>/dev/null || true)
+                STATUS=\\$(gcloud builds describe \\"\\${BUILD_NAME}\\" --project ${PROJECT_ID} --format='value(status)' 2>/dev/null || true)
 
-                if [ \"${STATUS}\" = \"SUCCESS\" ]; then
+                if [ \\"\\${STATUS}\\" = \\"SUCCESS\\" ]; then
                   break
                 fi
 
-                if [ \"${STATUS}\" = \"FAILURE\" ] || [ \"${STATUS}\" = \"CANCELLED\" ] || [ \"${STATUS}\" = \"TIMEOUT\" ] || [ \"${STATUS}\" = \"EXPIRED\" ]; then
-                  gcloud builds describe \"${BUILD_NAME}\" --project ${PROJECT_ID}
+                if [ \\"\\${STATUS}\\" = \\"FAILURE\\" ] || [ \\"\\${STATUS}\\" = \\"CANCELLED\\" ] || [ \\"\\${STATUS}\\" = \\"TIMEOUT\\" ] || [ \\"\\${STATUS}\\" = \\"EXPIRED\\" ]; then
+                  gcloud builds describe \\"\\${BUILD_NAME}\\" --project ${PROJECT_ID}
                   exit 1
                 fi
 
-                ATTEMPTS=$((ATTEMPTS + 1))
-                if [ ${ATTEMPTS} -ge ${MAX_ATTEMPTS} ]; then
-                  echo \"Cloud Build chua hoan thanh sau $((ATTEMPTS * SLEEP_SECONDS)) giay\"
-                  gcloud builds describe \"${BUILD_NAME}\" --project ${PROJECT_ID} || true
+                ATTEMPTS=\\$((ATTEMPTS + 1))
+                if [ \\${ATTEMPTS} -ge \\${MAX_ATTEMPTS} ]; then
+                  echo \\"Cloud Build chua hoan thanh sau \$((ATTEMPTS * SLEEP_SECONDS)) giay\\"
+                  gcloud builds describe \\"\\${BUILD_NAME}\\" --project ${PROJECT_ID} || true
                   exit 1
                 fi
 
-                STATUS_DISPLAY=${STATUS:-PENDING}
-                echo \"Cloud Build status: ${STATUS_DISPLAY}. Doi ${SLEEP_SECONDS}s...\"
-                sleep ${SLEEP_SECONDS}
+                STATUS_DISPLAY=\\${STATUS:-PENDING}
+                echo \\"Cloud Build status: \\${STATUS_DISPLAY}. Doi \\${SLEEP_SECONDS}s...\\"
+                sleep \\${SLEEP_SECONDS}
               done
 
               gcloud artifacts docker tags add ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} ${BACKEND_IMAGE_REPO}:latest --quiet
@@ -159,12 +159,12 @@ pipeline {
               set -euxo pipefail
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
-              BUILD_NAME=$(gcloud builds submit --async --format='value(name)' frontend --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID})
-              if [ -z \"${BUILD_NAME}\" ]; then
+              BUILD_NAME=\\$(gcloud builds submit --async --format='value(name)' frontend --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} --project ${PROJECT_ID})
+              if [ -z \\"\\${BUILD_NAME}\\" ]; then
                 echo 'Khong lay duoc Cloud Build name'
                 exit 1
               fi
-              echo \"Triggered Cloud Build: ${BUILD_NAME}\"
+              echo \\"Triggered Cloud Build: \\${BUILD_NAME}\\"
 
               STATUS=''
               ATTEMPTS=0
@@ -172,27 +172,27 @@ pipeline {
               SLEEP_SECONDS=10
 
               while true; do
-                STATUS=$(gcloud builds describe \"${BUILD_NAME}\" --project ${PROJECT_ID} --format='value(status)' 2>/dev/null || true)
+                STATUS=\\$(gcloud builds describe \\"\\${BUILD_NAME}\\" --project ${PROJECT_ID} --format='value(status)' 2>/dev/null || true)
 
-                if [ \"${STATUS}\" = \"SUCCESS\" ]; then
+                if [ \\"\\${STATUS}\\" = \\"SUCCESS\\" ]; then
                   break
                 fi
 
-                if [ \"${STATUS}\" = \"FAILURE\" ] || [ \"${STATUS}\" = \"CANCELLED\" ] || [ \"${STATUS}\" = \"TIMEOUT\" ] || [ \"${STATUS}\" = \"EXPIRED\" ]; then
-                  gcloud builds describe \"${BUILD_NAME}\" --project ${PROJECT_ID}
+                if [ \\"\\${STATUS}\\" = \\"FAILURE\\" ] || [ \\"\\${STATUS}\\" = \\"CANCELLED\\" ] || [ \\"\\${STATUS}\\" = \\"TIMEOUT\\" ] || [ \\"\\${STATUS}\\" = \\"EXPIRED\\" ]; then
+                  gcloud builds describe \\"\\${BUILD_NAME}\\" --project ${PROJECT_ID}
                   exit 1
                 fi
 
-                ATTEMPTS=$((ATTEMPTS + 1))
-                if [ ${ATTEMPTS} -ge ${MAX_ATTEMPTS} ]; then
-                  echo \"Cloud Build chua hoan thanh sau $((ATTEMPTS * SLEEP_SECONDS)) giay\"
-                  gcloud builds describe \"${BUILD_NAME}\" --project ${PROJECT_ID} || true
+                ATTEMPTS=\\$((ATTEMPTS + 1))
+                if [ \\${ATTEMPTS} -ge \\${MAX_ATTEMPTS} ]; then
+                  echo \\"Cloud Build chua hoan thanh sau \$((ATTEMPTS * SLEEP_SECONDS)) giay\\"
+                  gcloud builds describe \\"\\${BUILD_NAME}\\" --project ${PROJECT_ID} || true
                   exit 1
                 fi
 
-                STATUS_DISPLAY=${STATUS:-PENDING}
-                echo \"Cloud Build status: ${STATUS_DISPLAY}. Doi ${SLEEP_SECONDS}s...\"
-                sleep ${SLEEP_SECONDS}
+                STATUS_DISPLAY=\\${STATUS:-PENDING}
+                echo \\"Cloud Build status: \\${STATUS_DISPLAY}. Doi \\${SLEEP_SECONDS}s...\\"
+                sleep \\${SLEEP_SECONDS}
               done
 
               gcloud artifacts docker tags add ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} ${FRONTEND_IMAGE_REPO}:latest --quiet

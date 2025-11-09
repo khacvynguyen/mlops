@@ -97,6 +97,45 @@ pipeline {
       }
     }
 
+    // stage('Build & Push Backend Image') {
+    //   steps {
+    //     container('ci') {
+    //       sh '''
+    //         /bin/bash -c "
+    //           set -euxo pipefail
+    //           export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+
+    //           gcloud builds submit backend \
+    //             --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} \
+    //             --tag ${BACKEND_IMAGE_REPO}:latest \
+    //             --project ${PROJECT_ID}
+    //         "
+    //       '''
+    //     }
+    //   }
+    // }
+
+    // stage('Build & Push Frontend Image') {
+    //   when {
+    //     expression { fileExists('frontend/Dockerfile') }
+    //   }
+    //   steps {
+    //     container('ci') {
+    //       sh '''
+    //         /bin/bash -c "
+    //           set -euxo pipefail
+    //           export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+
+    //           gcloud builds submit frontend \
+    //             --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} \
+    //             --tag ${FRONTEND_IMAGE_REPO}:latest \
+    //             --project ${PROJECT_ID}
+    //         "
+    //       '''
+    //     }
+    //   }
+    // }
+    
     stage('Build & Push Backend Image') {
       steps {
         container('ci') {
@@ -105,10 +144,50 @@ pipeline {
               set -euxo pipefail
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
-              gcloud builds submit backend \
+              BUILD_NAME=$(gcloud builds submit backend \
+                --async \
+                --format='value(name)' \
                 --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} \
                 --tag ${BACKEND_IMAGE_REPO}:latest \
-                --project ${PROJECT_ID}
+                --project ${PROJECT_ID})
+
+              if [ -z \\"${BUILD_NAME}\\" ]; then
+                echo 'Khong lay duoc Cloud Build name'
+                exit 1
+              fi
+              echo \\"Triggered Cloud Build: ${BUILD_NAME}\\"
+
+              STATUS=''
+              ATTEMPTS=0
+              MAX_ATTEMPTS=60   # 60 * 10s = 10 phút
+              SLEEP_SECONDS=10
+
+              while true; do
+                STATUS=$(gcloud builds describe \\"${BUILD_NAME}\\" \
+                  --project ${PROJECT_ID} \
+                  --format='value(status)' 2>/dev/null || true)
+
+                if [ \\"${STATUS}\\" = \\"SUCCESS\\" ]; then
+                  break
+                fi
+
+                if [ \\"${STATUS}\\" = \\"FAILURE\\" ] || [ \\"${STATUS}\\" = \\"CANCELLED\\" ] || \
+                  [ \\"${STATUS}\\" = \\"TIMEOUT\\" ] || [ \\"${STATUS}\\" = \\"EXPIRED\\" ]; then
+                  gcloud builds describe \\"${BUILD_NAME}\\" --project ${PROJECT_ID}
+                  exit 1
+                fi
+
+                ATTEMPTS=$((ATTEMPTS + 1))
+                if [ ${ATTEMPTS} -ge ${MAX_ATTEMPTS} ]; then
+                  echo \\"Cloud Build chua hoan thanh sau $((ATTEMPTS * SLEEP_SECONDS)) giay\\"
+                  gcloud builds describe \\"${BUILD_NAME}\\" --project ${PROJECT_ID} || true
+                  exit 1
+                fi
+
+                STATUS_DISPLAY=${STATUS:-PENDING}
+                echo \\"Cloud Build status: ${STATUS_DISPLAY}. Doi ${SLEEP_SECONDS}s...\\" 
+                sleep ${SLEEP_SECONDS}
+              done
             "
           '''
         }
@@ -116,9 +195,7 @@ pipeline {
     }
 
     stage('Build & Push Frontend Image') {
-      when {
-        expression { fileExists('frontend/Dockerfile') }
-      }
+      when { expression { fileExists('frontend/Dockerfile') } }
       steps {
         container('ci') {
           sh '''
@@ -126,16 +203,55 @@ pipeline {
               set -euxo pipefail
               export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
-              gcloud builds submit frontend \
+              BUILD_NAME=$(gcloud builds submit frontend \
+                --async \
+                --format='value(name)' \
                 --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} \
                 --tag ${FRONTEND_IMAGE_REPO}:latest \
-                --project ${PROJECT_ID}
+                --project ${PROJECT_ID})
+
+              if [ -z \\"${BUILD_NAME}\\" ]; then
+                echo 'Khong lay duoc Cloud Build name'
+                exit 1
+              fi
+              echo \\"Triggered Cloud Build: ${BUILD_NAME}\\"
+
+              STATUS=''
+              ATTEMPTS=0
+              MAX_ATTEMPTS=60
+              SLEEP_SECONDS=10
+
+              while true; do
+                STATUS=$(gcloud builds describe \\"${BUILD_NAME}\\" \
+                  --project ${PROJECT_ID} \
+                  --format='value(status)' 2>/dev/null || true)
+
+                if [ \\"${STATUS}\\" = \\"SUCCESS\\" ]; then
+                  break
+                fi
+
+                if [ \\"${STATUS}\\" = \\"FAILURE\\" ] || [ \\"${STATUS}\\" = \\"CANCELLED\\" ] || \
+                  [ \\"${STATUS}\\" = \\"TIMEOUT\\" ] || [ \\"${STATUS}\\" = \\"EXPIRED\\" ]; then
+                  gcloud builds describe \\"${BUILD_NAME}\\" --project ${PROJECT_ID}
+                  exit 1
+                fi
+
+                ATTEMPTS=$((ATTEMPTS + 1))
+                if [ ${ATTEMPTS} -ge ${MAX_ATTEMPTS} ]; then
+                  echo \\"Cloud Build chua hoan thanh sau $((ATTEMPTS * SLEEP_SECONDS)) giay\\"
+                  gcloud builds describe \\"${BUILD_NAME}\\" --project ${PROJECT_ID} || true
+                  exit 1
+                fi
+
+                STATUS_DISPLAY=${STATUS:-PENDING}
+                echo \\"Cloud Build status: ${STATUS_DISPLAY}. Doi ${SLEEP_SECONDS}s...\\" 
+                sleep ${SLEEP_SECONDS}
+              done
             "
           '''
         }
       }
     }
-    
     
 
     stage('Terraform Init & Plan') {

@@ -108,5 +108,5 @@ def fast_sleep(monkeypatch):
 def reset_imports():
     """Cleanup fake modules between tests to prevent import caching issues."""
     yield
-    for mod in ["litellm", "langfuse", "requests"]:
+    for mod in ["litellm", "langfuse", "langfuse.decorators", "requests"]:
         sys.modules.pop(mod, None)

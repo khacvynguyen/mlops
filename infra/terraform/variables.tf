@@ -37,3 +37,9 @@ variable "oauth2_replicas" {
   description = "Số lượng replica cho oauth2 proxy"
   default     = 0
 }
+
+variable "cloudbuild_logs_project_id" {
+  type        = string
+  description = "Project chứa Cloud Build logs bucket (thường là project number)."
+  default     = "83344784907"
+}

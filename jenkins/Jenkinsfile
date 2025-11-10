@@ -35,7 +35,7 @@ pipeline {
     stage('Setup Tooling') {
       steps {
         container('ci') {
-          sh '''
+          sh '''#!/bin/bash
             set -euxo pipefail
             apt-get update
             apt-get install -y --no-install-recommends \
@@ -54,7 +54,7 @@ pipeline {
         container('ci') {
           script {
             withCredentials([file(credentialsId: 'gcp-sa', variable: 'GCP_SA_JSON')]) {
-              sh '''
+              sh '''#!/bin/bash
                 set -euxo pipefail
                 cp "$GCP_SA_JSON" ${WORKSPACE}/sa.json
                 export GOOGLE_APPLICATION_CREDENTIALS=${WORKSPACE}/sa.json
@@ -77,7 +77,7 @@ pipeline {
       steps {
         container('ci') {
           dir('backend') {
-            sh '''
+            sh '''#!/bin/bash
               set -euxo pipefail
               export PYTHONPATH=$PWD:$PYTHONPATH
               python3 -m venv venv
@@ -94,7 +94,7 @@ pipeline {
     stage('Build & Push Backend Image') {
       steps {
         container('ci') {
-          sh '''
+          sh '''#!/bin/bash
             set -euxo pipefail
             export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
@@ -151,7 +151,7 @@ pipeline {
       when { expression { fileExists('frontend/Dockerfile') } }
       steps {
         container('ci') {
-          sh '''
+          sh '''#!/bin/bash
             set -euxo pipefail
             export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
@@ -208,7 +208,7 @@ pipeline {
       steps {
         container('ci') {
           dir('infra/terraform') {
-            sh '''
+            sh '''#!/bin/bash
               set -euxo pipefail
               terraform init -input=false
               terraform plan -input=false \
@@ -239,7 +239,7 @@ pipeline {
       steps {
         container('ci') {
           dir('infra/terraform') {
-            sh '''
+            sh '''#!/bin/bash
               set -euxo pipefail
               terraform apply -input=false -auto-approve tfplan
             '''
@@ -251,7 +251,7 @@ pipeline {
     stage('Post-deploy Verification') {
       steps {
         container('ci') {
-          sh '''
+          sh '''#!/bin/bash
             set -euxo pipefail
             kubectl rollout status deployment/llm-backend -n llm-app --timeout=120s || true
             kubectl rollout status deployment/llm-frontend -n llm-app --timeout=120s || true

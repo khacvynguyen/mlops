@@ -36,16 +36,14 @@ pipeline {
       steps {
         container('ci') {
           sh '''
-            /bin/bash -c "
-              set -euxo pipefail
-              apt-get update
-              apt-get install -y --no-install-recommends \
-                python3 python3-venv python3-pip unzip curl gnupg lsb-release \
-                kubectl google-cloud-cli-gke-gcloud-auth-plugin
-              curl -fsSLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-              unzip -o terraform.zip -d /usr/local/bin
-              rm terraform.zip
-            "
+            set -euxo pipefail
+            apt-get update
+            apt-get install -y --no-install-recommends \
+              python3 python3-venv python3-pip unzip curl gnupg lsb-release \
+              kubectl google-cloud-cli-gke-gcloud-auth-plugin
+            curl -fsSLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+            unzip -o terraform.zip -d /usr/local/bin
+            rm terraform.zip
           '''
         }
       }
@@ -57,16 +55,14 @@ pipeline {
           script {
             withCredentials([file(credentialsId: 'gcp-sa', variable: 'GCP_SA_JSON')]) {
               sh '''
-                /bin/bash -c "
-                  set -euxo pipefail
-                  cp "$GCP_SA_JSON" ${WORKSPACE}/sa.json
-                  export GOOGLE_APPLICATION_CREDENTIALS=${WORKSPACE}/sa.json
-                  gcloud auth activate-service-account --key-file=${WORKSPACE}/sa.json
-                  gcloud config set project $PROJECT_ID
-                  gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
-                  gcloud components install kubectl --quiet || true
-                  gcloud container clusters get-credentials $CLUSTER_NAME --region $CLUSTER_LOCATION --project $PROJECT_ID
-                "
+                set -euxo pipefail
+                cp "$GCP_SA_JSON" ${WORKSPACE}/sa.json
+                export GOOGLE_APPLICATION_CREDENTIALS=${WORKSPACE}/sa.json
+                gcloud auth activate-service-account --key-file=${WORKSPACE}/sa.json
+                gcloud config set project $PROJECT_ID
+                gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+                gcloud components install kubectl --quiet || true
+                gcloud container clusters get-credentials $CLUSTER_NAME --region $CLUSTER_LOCATION --project $PROJECT_ID
               '''
               env.GOOGLE_APPLICATION_CREDENTIALS = "${env.WORKSPACE}/sa.json"
               env.TF_VAR_google_credentials_path = env.GOOGLE_APPLICATION_CREDENTIALS
@@ -82,177 +78,151 @@ pipeline {
         container('ci') {
           dir('backend') {
             sh '''
-              /bin/bash -c "
-                set -euxo pipefail
-                export PYTHONPATH=$PWD:$PYTHONPATH
-                python3 -m venv venv
-                . venv/bin/activate
-                pip install --upgrade pip
-                if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-                if [ -d tests ]; then pytest tests; else echo 'No backend tests directory'; fi
-              "
+              set -euxo pipefail
+              export PYTHONPATH=$PWD:$PYTHONPATH
+              python3 -m venv venv
+              . venv/bin/activate
+              pip install --upgrade pip
+              if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+              if [ -d tests ]; then pytest tests; else echo 'No backend tests directory'; fi
             '''
           }
         }
       }
     }
 
-    // stage('Build & Push Backend Image') {
-    //   steps {
-    //     container('ci') {
-    //       sh '''
-    //         /bin/bash -c "
-    //           set -euxo pipefail
-    //           export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
-
-    //           gcloud builds submit backend \
-    //             --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} \
-    //             --tag ${BACKEND_IMAGE_REPO}:latest \
-    //             --project ${PROJECT_ID}
-    //         "
-    //       '''
-    //     }
-    //   }
-    // }
-
-    // stage('Build & Push Frontend Image') {
-    //   when {
-    //     expression { fileExists('frontend/Dockerfile') }
-    //   }
-    //   steps {
-    //     container('ci') {
-    //       sh '''
-    //         /bin/bash -c "
-    //           set -euxo pipefail
-    //           export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
-
-    //           gcloud builds submit frontend \
-    //             --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} \
-    //             --tag ${FRONTEND_IMAGE_REPO}:latest \
-    //             --project ${PROJECT_ID}
-    //         "
-    //       '''
-    //     }
-    //   }
-    // }
-    
     stage('Build & Push Backend Image') {
       steps {
         container('ci') {
           sh '''
-            /bin/bash -c "
-              set -euxo pipefail
-              export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+            set -euxo pipefail
+            export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
-              BUILD_NAME=\$(gcloud builds submit backend \
-                --async \
-                --format='value(name)' \
-                --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} \
-                --tag ${BACKEND_IMAGE_REPO}:latest \
-                --project ${PROJECT_ID})
+            BUILD_NAME=$(gcloud builds submit backend \
+              --async \
+              --format='value(name)' \
+              --tag ${BACKEND_IMAGE_REPO}:${IMAGE_TAG} \
+              --tag ${BACKEND_IMAGE_REPO}:latest \
+              --project ${PROJECT_ID})
 
-              if [ -z \"\${BUILD_NAME}\" ]; then
-                echo 'Khong lay duoc Cloud Build name'
+            if [ -z "${BUILD_NAME}" ]; then
+              echo 'Khong lay duoc Cloud Build name'
+              exit 1
+            fi
+            echo "Triggered Cloud Build: ${BUILD_NAME}"
+
+            STATUS=''
+            ATTEMPTS=0
+            MAX_ATTEMPTS=60
+            SLEEP_SECONDS=10
+
+            while true; do
+              STATUS=$(gcloud builds describe "${BUILD_NAME}" \
+                --project ${PROJECT_ID} \
+                --format='value(status)' 2>/dev/null || true)
+
+              if [ "${STATUS}" = "SUCCESS" ]; then
+                break
+              fi
+
+              if [ "${STATUS}" = "FAILURE" ] || [ "${STATUS}" = "CANCELLED" ] || \
+                [ "${STATUS}" = "TIMEOUT" ] || [ "${STATUS}" = "EXPIRED" ]; then
+                gcloud builds describe "${BUILD_NAME}" --project ${PROJECT_ID}
                 exit 1
               fi
-              echo \"Triggered Cloud Build: \${BUILD_NAME}\"
 
-              STATUS=''
-              ATTEMPTS=0
-              MAX_ATTEMPTS=60
-              SLEEP_SECONDS=10
+              ATTEMPTS=$((ATTEMPTS + 1))
+              if [ ${ATTEMPTS} -ge ${MAX_ATTEMPTS} ]; then
+                echo "Cloud Build chua hoan thanh sau $((ATTEMPTS * SLEEP_SECONDS)) giay"
+                gcloud builds describe "${BUILD_NAME}" --project ${PROJECT_ID} || true
+                exit 1
+              fi
 
-              while true; do
-                STATUS=\$(gcloud builds describe \"\${BUILD_NAME}\" \
-                  --project ${PROJECT_ID} \
-                  --format='value(status)' 2>/dev/null || true)
-
-                if [ \"\${STATUS}\" = \"SUCCESS\" ]; then
-                  break
-                fi
-
-                if [ \"\${STATUS}\" = \"FAILURE\" ] || [ \"\${STATUS}\" = \"CANCELLED\" ] || \
-                  [ \"\${STATUS}\" = \"TIMEOUT\" ] || [ \"\${STATUS}\" = \"EXPIRED\" ]; then
-                  gcloud builds describe \"\${BUILD_NAME}\" --project ${PROJECT_ID}
-                  exit 1
-                fi
-
-                ATTEMPTS=\$((ATTEMPTS + 1))
-                if [ \${ATTEMPTS} -ge \${MAX_ATTEMPTS} ]; then
-                  echo \"Cloud Build chua hoan thanh sau \$((ATTEMPTS * SLEEP_SECONDS)) giay\"
-                  gcloud builds describe \"\${BUILD_NAME}\" --project ${PROJECT_ID} || true
-                  exit 1
-                fi
-
-                STATUS_DISPLAY=\${STATUS:-PENDING}
-                echo \"Cloud Build status: \${STATUS_DISPLAY}. Doi \${SLEEP_SECONDS}s...\"
-                sleep \${SLEEP_SECONDS}
-              done
-            "
+              STATUS_DISPLAY=${STATUS:-PENDING}
+              echo "Cloud Build status: ${STATUS_DISPLAY}. Doi ${SLEEP_SECONDS}s..."
+              sleep ${SLEEP_SECONDS}
+            done
           '''
         }
       }
     }
-    
+
     stage('Build & Push Frontend Image') {
       when { expression { fileExists('frontend/Dockerfile') } }
       steps {
         container('ci') {
           sh '''
-            /bin/bash -c "
-              set -euxo pipefail
-              export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+            set -euxo pipefail
+            export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
-              BUILD_NAME=\$(gcloud builds submit frontend \
-                --async \
-                --format='value(name)' \
-                --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} \
-                --tag ${FRONTEND_IMAGE_REPO}:latest \
-                --project ${PROJECT_ID})
+            BUILD_NAME=$(gcloud builds submit frontend \
+              --async \
+              --format='value(name)' \
+              --tag ${FRONTEND_IMAGE_REPO}:${IMAGE_TAG} \
+              --tag ${FRONTEND_IMAGE_REPO}:latest \
+              --project ${PROJECT_ID})
 
-              if [ -z \"\${BUILD_NAME}\" ]; then
-                echo 'Khong lay duoc Cloud Build name'
+            if [ -z "${BUILD_NAME}" ]; then
+              echo 'Khong lay duoc Cloud Build name'
+              exit 1
+            fi
+            echo "Triggered Cloud Build: ${BUILD_NAME}"
+
+            STATUS=''
+            ATTEMPTS=0
+            MAX_ATTEMPTS=60
+            SLEEP_SECONDS=10
+
+            while true; do
+              STATUS=$(gcloud builds describe "${BUILD_NAME}" \
+                --project ${PROJECT_ID} \
+                --format='value(status)' 2>/dev/null || true)
+
+              if [ "${STATUS}" = "SUCCESS" ]; then
+                break
+              fi
+
+              if [ "${STATUS}" = "FAILURE" ] || [ "${STATUS}" = "CANCELLED" ] || \
+                [ "${STATUS}" = "TIMEOUT" ] || [ "${STATUS}" = "EXPIRED" ]; then
+                gcloud builds describe "${BUILD_NAME}" --project ${PROJECT_ID}
                 exit 1
               fi
-              echo \"Triggered Cloud Build: \${BUILD_NAME}\"
 
-              STATUS=''
-              ATTEMPTS=0
-              MAX_ATTEMPTS=60
-              SLEEP_SECONDS=10
+              ATTEMPTS=$((ATTEMPTS + 1))
+              if [ ${ATTEMPTS} -ge ${MAX_ATTEMPTS} ]; then
+                echo "Cloud Build chua hoan thanh sau $((ATTEMPTS * SLEEP_SECONDS)) giay"
+                gcloud builds describe "${BUILD_NAME}" --project ${PROJECT_ID} || true
+                exit 1
+              fi
 
-              while true; do
-                STATUS=\$(gcloud builds describe \"\${BUILD_NAME}\" \
-                  --project ${PROJECT_ID} \
-                  --format='value(status)' 2>/dev/null || true)
-
-                if [ \"\${STATUS}\" = \"SUCCESS\" ]; then
-                  break
-                fi
-
-                if [ \"\${STATUS}\" = \"FAILURE\" ] || [ \"\${STATUS}\" = \"CANCELLED\" ] || \
-                  [ \"\${STATUS}\" = \"TIMEOUT\" ] || [ \"\${STATUS}\" = \"EXPIRED\" ]; then
-                  gcloud builds describe \"\${BUILD_NAME}\" --project ${PROJECT_ID}
-                  exit 1
-                fi
-
-                ATTEMPTS=\$((ATTEMPTS + 1))
-                if [ \${ATTEMPTS} -ge \${MAX_ATTEMPTS} ]; then
-                  echo \"Cloud Build chua hoan thanh sau \$((ATTEMPTS * SLEEP_SECONDS)) giay\"
-                  gcloud builds describe \"\${BUILD_NAME}\" --project ${PROJECT_ID} || true
-                  exit 1
-                fi
-
-                STATUS_DISPLAY=\${STATUS:-PENDING}
-                echo \"Cloud Build status: \${STATUS_DISPLAY}. Doi \${SLEEP_SECONDS}s...\"
-                sleep \${SLEEP_SECONDS}
-              done
-            "
+              STATUS_DISPLAY=${STATUS:-PENDING}
+              echo "Cloud Build status: ${STATUS_DISPLAY}. Doi ${SLEEP_SECONDS}s..."
+              sleep ${SLEEP_SECONDS}
+            done
           '''
         }
       }
     }
-     
+
+    stage('Terraform Init & Plan') {
+      steps {
+        container('ci') {
+          dir('infra/terraform') {
+            sh '''
+              set -euxo pipefail
+              terraform init -input=false
+              terraform plan -input=false \
+                -var="backend_image=${BACKEND_IMAGE_REPO}:${IMAGE_TAG}" \
+                -var="frontend_image=${FRONTEND_IMAGE_REPO}:${IMAGE_TAG}" \
+                -var="backend_replicas=${BACKEND_REPLICAS}" \
+                -var="frontend_replicas=${FRONTEND_REPLICAS}" \
+                -var="oauth2_replicas=${OAUTH2_REPLICAS}" \
+                -out=tfplan
+            '''
+          }
+        }
+      }
+    }
 
     stage('Approval') {
       when {
@@ -270,10 +240,8 @@ pipeline {
         container('ci') {
           dir('infra/terraform') {
             sh '''
-              /bin/bash -c "
-                set -euxo pipefail
-                terraform apply -input=false -auto-approve tfplan
-              "
+              set -euxo pipefail
+              terraform apply -input=false -auto-approve tfplan
             '''
           }
         }
@@ -284,11 +252,9 @@ pipeline {
       steps {
         container('ci') {
           sh '''
-            /bin/bash -c "
-              set -euxo pipefail
-              kubectl rollout status deployment/llm-backend -n llm-app --timeout=120s || true
-              kubectl rollout status deployment/llm-frontend -n llm-app --timeout=120s || true
-            "
+            set -euxo pipefail
+            kubectl rollout status deployment/llm-backend -n llm-app --timeout=120s || true
+            kubectl rollout status deployment/llm-frontend -n llm-app --timeout=120s || true
           '''
         }
       }
@@ -304,4 +270,3 @@ pipeline {
     }
   }
 }
-

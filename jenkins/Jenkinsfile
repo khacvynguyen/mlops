@@ -65,7 +65,7 @@ pipeline {
                 gcloud container clusters get-credentials $CLUSTER_NAME --region $CLUSTER_LOCATION --project $PROJECT_ID
               '''
               env.GOOGLE_APPLICATION_CREDENTIALS = "${env.WORKSPACE}/sa.json"
-              env.TF_VAR_google_credentials_path = env.GOOGLE_APPLICATION_CREDENTIALS
+              env.TF_VAR_google_credentials_path = "${env.WORKSPACE}/sa.json"
               env.TF_VAR_project_id = env.PROJECT_ID
             }
           }

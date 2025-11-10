@@ -11,5 +11,4 @@ provider "helm" {
 provider "google" {
   project     = var.project_id
   region      = "asia-southeast1"
-  credentials = file(var.google_credentials_path)
 }

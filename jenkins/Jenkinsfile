@@ -49,28 +49,61 @@ pipeline {
       }
     }
 
+    // stage('Authenticate GCP') {
+    //   steps {
+    //     container('ci') {
+    //       script {
+    //         withCredentials([file(credentialsId: 'gcp-sa', variable: 'GCP_SA_JSON')]) {
+    //           sh '''#!/bin/bash
+    //             set -euxo pipefail
+    //             cp "$GCP_SA_JSON" ${WORKSPACE}/sa.json
+    //             export GOOGLE_APPLICATION_CREDENTIALS=${WORKSPACE}/sa.json
+    //             gcloud auth activate-service-account --key-file=${WORKSPACE}/sa.json
+    //             gcloud config set project $PROJECT_ID
+    //             gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+    //             gcloud components install kubectl --quiet || true
+    //             gcloud container clusters get-credentials $CLUSTER_NAME --region $CLUSTER_LOCATION --project $PROJECT_ID
+    //           '''
+    //           env.GOOGLE_APPLICATION_CREDENTIALS = "${env.WORKSPACE}/sa.json"
+    //           env.TF_VAR_google_credentials_path = "${env.WORKSPACE}/sa.json"
+    //           env.TF_VAR_project_id = env.PROJECT_ID
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
+
     stage('Authenticate GCP') {
-      steps {
-        container('ci') {
-          script {
-            withCredentials([file(credentialsId: 'gcp-sa', variable: 'GCP_SA_JSON')]) {
-              sh '''#!/bin/bash
-                set -euxo pipefail
-                cp "$GCP_SA_JSON" ${WORKSPACE}/sa.json
-                export GOOGLE_APPLICATION_CREDENTIALS=${WORKSPACE}/sa.json
-                gcloud auth activate-service-account --key-file=${WORKSPACE}/sa.json
-                gcloud config set project $PROJECT_ID
-                gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
-                gcloud components install kubectl --quiet || true
-                gcloud container clusters get-credentials $CLUSTER_NAME --region $CLUSTER_LOCATION --project $PROJECT_ID
-              '''
-              env.GOOGLE_APPLICATION_CREDENTIALS = "${env.WORKSPACE}/sa.json"
-              env.TF_VAR_google_credentials_path = "${env.WORKSPACE}/sa.json"
-              env.TF_VAR_project_id = env.PROJECT_ID
+        steps {
+            container('ci') {
+            script {
+                withCredentials([file(credentialsId: 'gcp-sa', variable: 'GCP_SA_JSON')]) {
+                    sh '''#!/bin/bash
+                        set -euxo pipefail
+                        cp "$GCP_SA_JSON" ${WORKSPACE}/sa.json
+                        export GOOGLE_APPLICATION_CREDENTIALS=${WORKSPACE}/sa.json
+                        
+                        # DEBUG: Kiểm tra SA đang dùng
+                        echo "=== Checking service account ==="
+                        cat ${WORKSPACE}/sa.json | grep client_email
+                        
+                        gcloud auth activate-service-account --key-file=${WORKSPACE}/sa.json
+                        gcloud config set project $PROJECT_ID
+                        
+                        # DEBUG: Xác nhận SA đã auth
+                        gcloud auth list
+                        
+                        gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+                        gcloud components install kubectl --quiet || true
+                        gcloud container clusters get-credentials $CLUSTER_NAME --region $CLUSTER_LOCATION --project $PROJECT_ID
+                    '''
+                    env.GOOGLE_APPLICATION_CREDENTIALS = "${env.WORKSPACE}/sa.json"
+                    env.TF_VAR_google_credentials_path = "${env.WORKSPACE}/sa.json"
+                    env.TF_VAR_project_id = env.PROJECT_ID
+                    }
+                }
             }
-          }
         }
-      }
     }
 
     stage('Unit Tests') {

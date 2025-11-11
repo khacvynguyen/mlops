@@ -80,6 +80,10 @@ pipeline {
                 withCredentials([file(credentialsId: 'gcp-sa', variable: 'GCP_SA_JSON')]) {
                     sh '''#!/bin/bash
                         set -euxo pipefail
+                        
+                        # Revoke tất cả auth cũ để clear cache
+                        gcloud auth revoke --all || true
+                        
                         cp "$GCP_SA_JSON" ${WORKSPACE}/sa.json
                         export GOOGLE_APPLICATION_CREDENTIALS=${WORKSPACE}/sa.json
                         
@@ -87,11 +91,19 @@ pipeline {
                         echo "=== Checking service account ==="
                         cat ${WORKSPACE}/sa.json | grep client_email
                         
+                        # Auth lại với SA mới
                         gcloud auth activate-service-account --key-file=${WORKSPACE}/sa.json
                         gcloud config set project $PROJECT_ID
                         
                         # DEBUG: Xác nhận SA đã auth
                         gcloud auth list
+                        
+                        # Test quyền đọc secret TRƯỚC KHI chạy Terraform
+                        echo "=== Testing secret access ==="
+                        gcloud secrets versions access latest --secret=gemini-api-key --project=$PROJECT_ID || {
+                            echo "ERROR: Cannot access secrets!"
+                            exit 1
+                        }
                         
                         gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
                         gcloud components install kubectl --quiet || true

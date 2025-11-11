@@ -188,37 +188,37 @@ resource "kubernetes_config_map" "oauth2_proxy_config" {
 
 # ---------- Secret Manager data sources ----------
 data "google_secret_manager_secret_version" "gemini" {
-  project = var.project_id
+  project = var.project_number  # ← Dùng variable
   secret  = "gemini-api-key"
   version = "latest"
 }
 
 data "google_secret_manager_secret_version" "langfuse_public" {
-  project = var.project_id
+  project = var.project_number  # ← Dùng variable
   secret  = "langfuse-public-key"
   version = "latest"
 }
 
 data "google_secret_manager_secret_version" "langfuse_secret" {
-  project = var.project_id
+  project = var.project_number  # ← Dùng variable
   secret  = "langfuse-secret-key"
   version = "latest"
 }
 
 data "google_secret_manager_secret_version" "oauth2_proxy_client_id" {
-  project = var.project_id
+  project = var.project_number  # ← Dùng variable
   secret  = "oauth2-proxy-client-id"
   version = "latest"
 }
 
 data "google_secret_manager_secret_version" "oauth2_proxy_client_secret" {
-  project = var.project_id
+  project = var.project_number  # ← Dùng variable
   secret  = "oauth2-proxy-client-secret"
   version = "latest"
 }
 
 data "google_secret_manager_secret_version" "oauth2_proxy_cookie_secret" {
-  project = var.project_id
+  project = var.project_number  # ← Dùng variable
   secret  = "oauth2-proxy-cookie-secret"
   version = "latest"
 }

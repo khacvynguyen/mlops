@@ -3,9 +3,10 @@ variable "project_id" {
   description = "GCP project ID dùng cho các provider/data source"
 }
 
-variable "google_credentials_path" {
+variable "project_number" {
   type        = string
-  description = "Path tới file JSON key của service account Terraform"
+  description = "GCP project number (dùng để truy cập secrets)"
+  default     = "83344784907"
 }
 
 variable "backend_image" {

@@ -256,15 +256,14 @@ pipeline {
                     sh '''#!/bin/bash
                         set -euxo pipefail
                         
-                        # QUAN TRỌNG: Export credentials cho Terraform provider
+                        # QUAN TRỌNG: Chỉ dùng GOOGLE_APPLICATION_CREDENTIALS (path)
                         export GOOGLE_APPLICATION_CREDENTIALS=${WORKSPACE}/sa.json
-                        export GOOGLE_CREDENTIALS=$(cat ${WORKSPACE}/sa.json)
                         
-                        # Verify SA identity
+                        # Verify SA identity (dùng grep thay vì jq)
                         echo "=== Terraform will use SA ==="
-                        cat ${WORKSPACE}/sa.json | jq -r '.client_email'
+                        grep -o '"client_email": "[^"]*"' ${WORKSPACE}/sa.json | cut -d'"' -f4
                         
-                        # Test lại secret access với SA này
+                        # Test lại secret access
                         echo "=== Testing secret access for Terraform ==="
                         gcloud secrets versions access latest --secret=gemini-api-key --project=$PROJECT_ID || {
                             echo "ERROR: SA cannot access secrets!"
@@ -303,9 +302,8 @@ pipeline {
                     sh '''#!/bin/bash
                         set -euxo pipefail
                         
-                        # Export credentials cho Terraform
+                        # Chỉ cần export path đến SA key file
                         export GOOGLE_APPLICATION_CREDENTIALS=${WORKSPACE}/sa.json
-                        export GOOGLE_CREDENTIALS=$(cat ${WORKSPACE}/sa.json)
                         
                         terraform apply -input=false -auto-approve tfplan
                     '''

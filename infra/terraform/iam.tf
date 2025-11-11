@@ -21,3 +21,10 @@ resource "google_project_iam_member" "jenkins_compute_viewer" {
   role    = "roles/compute.viewer"
   member  = "serviceAccount:jenkins-ci@${var.project_id}.iam.gserviceaccount.com"
 }
+
+# Grant permissions cho jenkins-ci SA ở project chứa secrets
+resource "google_project_iam_member" "jenkins_secretmanager_accessor_secrets_project" {
+  project = var.project_number  # 83344784907
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:jenkins-ci@${var.project_id}.iam.gserviceaccount.com"
+}
